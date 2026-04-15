@@ -17,26 +17,44 @@
 #include <stdio.h>
 #include <string.h>
 
+#define MAX_HISTORY 100
+
+char *history[MAX_HISTORY];
+int history_count = 0;
 /*
   Function Declarations for builtin shell commands:
  */
 int lsh_cd(char **args);
 int lsh_help(char **args);
 int lsh_exit(char **args);
-
+int lsh_pwd(char **args);
+int lsh_echo(char **args);
+int lsh_history(char **args);
+int lsh_env(char **args);
+int lsh_clear(char **args);
 /*
   List of builtin commands, followed by their corresponding functions.
  */
 char *builtin_str[] = {
   "cd",
   "help",
-  "exit"
+  "exit",
+  "pwd",
+  "echo",
+  "history",
+  "env",
+  "clear"
 };
 
 int (*builtin_func[]) (char **) = {
   &lsh_cd,
   &lsh_help,
-  &lsh_exit
+  &lsh_exit,
+  &lsh_pwd,
+  &lsh_echo,
+  &lsh_history,
+  &lsh_env,
+  &lsh_clear
 };
 
 int lsh_num_builtins() {
@@ -63,7 +81,58 @@ int lsh_cd(char **args)
   }
   return 1;
 }
+/**
+ * @builtin command : print pwd 
+ * show dirctory
+ */
+int lsh_pwd(char **args)
+{
+	char cwd[1024];
+	if(getcwd(cwd, sizeof(cwd)) != NULL){
+		printf("%s\n", cwd);
+	}else{
+		perror("pwd error");
+	}
+	return 1;
+}
+/**
+ * @builtin command: write echo "anything"
+ * print "anything"
+ */
+int lsh_echo(char **args)
+{
+	int i =1;
+	while (args[i] != NULL){
+		printf("%s ",args[i]);
+		i++;
+	}
+	printf("\n");
+	return 1;
+}
+/**
+ * builtin command: print history 
+ * show all commands you write
+ */
+int lsh_history(char **args)
+{
+	for (int i =0; i < history_count; i++){
+		printf("%d %s", i + 1, history[i]);
+	}
+	return 1;	
 
+}
+/**
+ * builtin command : env
+ * show evironment virables
+ */
+int lsh_env(char **args)
+{
+	extern char **environ;
+	for (int j= 0; environ[j] != NULL; j++){
+		printf("%s\n", environ[j]);
+	}
+	return 1;
+}
 /**
    @brief Builtin command: print help.
    @param args List of args.  Not examined.
@@ -83,7 +152,15 @@ int lsh_help(char **args)
   printf("Use the man command for information on other programs.\n");
   return 1;
 }
-
+/**
+ * builtin command : clear 
+ * clean monitor
+ */
+int lsh_clear(char **args)
+{
+	system("clear");
+	return 1;
+}
 /**
    @brief Builtin command: exit.
    @param args List of args.  Not examined.
@@ -257,6 +334,10 @@ void lsh_loop(void)
     printf("> ");
     line = lsh_read_line();
     args = lsh_split_line(line);
+    if (history_count < MAX_HISTORY){
+	    history[history_count] = strdup(line);
+	    history_count++;
+    }
     status = lsh_execute(args);
 
     free(line);
